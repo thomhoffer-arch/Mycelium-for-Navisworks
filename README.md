@@ -32,10 +32,10 @@ DLLs — these are machine-local and can't be vendored), plus MSBuild
 or directly:
 
 ```powershell
-msbuild mycelium-for-navisworks.csproj /p:Configuration=Release /p:NavisworksPath="<install dir>"
+msbuild src\Mycelium.Navisworks.Plugin\Mycelium.Navisworks.Plugin.csproj /p:Configuration=Release /p:NavisworksPath="<install dir>"
 ```
 
-Output: `bin\Release\net48\MyceliumNavisworks.dll`.
+Output: `src\Mycelium.Navisworks.Plugin\bin\Release\net48\MyceliumNavisworks.dll`.
 
 ## Install the plugin
 
@@ -78,12 +78,34 @@ deriving from a Revit `UniqueId` (`src/IfcGuid.cs`).
 
 ## Layout
 
+The connector is split so the host-bound shim is tiny and the mapping logic is
+testable without a Navisworks install:
+
 ```
-mycelium-for-navisworks.csproj   net48, references local Navisworks DLLs
-src/MyceliumExportPlugin.cs      the add-in: clashes → spine records → JSONL
-src/IfcGuid.cs                   Revit UniqueId → IFC GlobalId
-src/SpineRecord.cs               spine record + zero-dep JSON writer
-build.ps1                        msbuild wrapper
+src/Mycelium.Navisworks.Core/    netstandard2.0, NO Navisworks dependency
+  IfcGuid.cs                       Revit UniqueId → IFC GlobalId (+ inverse, for tests)
+  SpineRecord.cs                   spine record + zero-dep JSON writer
+src/Mycelium.Navisworks.Plugin/  net48 add-in, references local Navisworks DLLs
+  MyceliumExportPlugin.cs          clashes → Core → JSONL  (output: MyceliumNavisworks.dll)
+tests/Mycelium.Navisworks.Tests/ net8.0 xUnit, exercises Core cross-platform
+build.ps1                        msbuild wrapper for the add-in
+.github/workflows/ci.yml         CI: Core tests on Linux; best-effort add-in build on Windows
 ```
+
+## Tests / CI
+
+The `Core` library has no Navisworks reference, so it builds and is unit-tested
+on any platform:
+
+```bash
+dotnet test tests/Mycelium.Navisworks.Tests/Mycelium.Navisworks.Tests.csproj
+```
+
+CI runs those tests on Linux (the real gate). It also has a Windows job that
+compiles the add-in **only** when a runner exposes the Navisworks API DLLs (set
+the repo variable `NAVISWORKS_PATH`, e.g. on a self-hosted runner with
+Navisworks installed) — hosted runners can't, so that job otherwise prints a
+notice and passes. The authoritative add-in build is still `build.ps1` on a
+machine with Navisworks.
 
 License: Apache-2.0.

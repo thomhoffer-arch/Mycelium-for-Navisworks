@@ -11,9 +11,11 @@ if (-not (Test-Path "$NavisworksPath\Autodesk.Navisworks.Api.dll")) {
 }
 
 # Requires MSBuild (Visual Studio or Build Tools) on PATH.
-msbuild mycelium-for-navisworks.csproj `
+$project = "src\Mycelium.Navisworks.Plugin\Mycelium.Navisworks.Plugin.csproj"
+msbuild $project `
     /p:Configuration=$Configuration `
     /p:NavisworksPath="$NavisworksPath"
 
-Write-Host "`nBuilt bin\$Configuration\net48\MyceliumNavisworks.dll" -ForegroundColor Green
+$dll = "src\Mycelium.Navisworks.Plugin\bin\$Configuration\net48\MyceliumNavisworks.dll"
+Write-Host "`nBuilt $dll" -ForegroundColor Green
 Write-Host "Deploy: copy it to a folder named 'MyceliumNavisworks' under the Navisworks 'Plugins' directory (see README)."

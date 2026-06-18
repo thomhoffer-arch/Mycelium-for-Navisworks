@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    SDK-independent core of the connector: the spine-record shape + JSON writer
+    and the Revit-UniqueId -> IFC-GlobalId derivation. Deliberately has NO
+    Navisworks reference, so it builds and is unit-tested on any platform
+    (Linux/macOS CI included) — see tests/Mycelium.Navisworks.Tests.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <RootNamespace>Mycelium.Navisworks</RootNamespace>
+    <AssemblyName>Mycelium.Navisworks.Core</AssemblyName>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+</Project>

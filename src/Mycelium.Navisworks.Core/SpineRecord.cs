@@ -35,7 +35,10 @@ namespace Mycelium.Navisworks
             J.Str(id, "source", Source, true);
             J.Str(id, "sourceLocalId", SourceLocalId);
             J.Str(id, "projectKey", ProjectKey);
-            J.Str(id, "uniqueId", "navisworks:" + SourceLocalId);
+            // A clash emits one record per element, so sourceLocalId alone is not
+            // unique — qualify with the element's ifcGuid so each record's
+            // uniqueId is stable and distinct.
+            J.Str(id, "uniqueId", UniqueId());
             J.Str(id, "ifcGuid", IfcGuid);
             J.Str(id, "modelInstanceId", ModelInstanceId);
             if (!string.IsNullOrEmpty(ClassificationCode))
@@ -56,6 +59,14 @@ namespace Mycelium.Navisworks
             fr.Append('}');
 
             return "{\"identity\":" + id + ",\"freshness\":" + fr + "}";
+        }
+
+        /// <summary>Stable, per-record identity: source-qualified local id plus
+        /// the joining ifcGuid (the two elements of a clash share a local id).</summary>
+        public string UniqueId()
+        {
+            string baseId = "navisworks:" + SourceLocalId;
+            return string.IsNullOrEmpty(IfcGuid) ? baseId : baseId + "#" + IfcGuid;
         }
     }
 
