@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  # The real gate: the SDK-independent core (IFC GUID derivation + spine record
+  # JSON) builds and is fully unit-tested on a stock Linux runner — no
+  # Navisworks, no Windows required.
+  core-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Restore
+        run: dotnet restore tests/Mycelium.Navisworks.Tests/Mycelium.Navisworks.Tests.csproj
+      - name: Test
+        run: >-
+          dotnet test tests/Mycelium.Navisworks.Tests/Mycelium.Navisworks.Tests.csproj
+          --configuration Release
+          --logger "console;verbosity=normal"
+
+  # Best-effort compile of the Navisworks add-in. The Autodesk.Navisworks.*
+  # DLLs are proprietary and machine-local, so they can't be fetched here. This
+  # job builds the add-in only if a runner exposes them (set repo/org variable
+  # NAVISWORKS_PATH, e.g. on a self-hosted runner with Navisworks installed);
+  # otherwise it emits a notice and passes, since a hosted runner can never
+  # satisfy this. Authoritative build path is build.ps1 on a Navisworks machine.
+  plugin-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+      - name: Locate Navisworks API
+        id: nav
+        shell: pwsh
+        run: |
+          $p = "${{ vars.NAVISWORKS_PATH }}"
+          if ($p -and (Test-Path (Join-Path $p 'Autodesk.Navisworks.Api.dll'))) {
+            "found=true"  | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            "path=$p"     | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            "found=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            Write-Host "::notice title=Navisworks add-in not compiled::Navisworks API DLLs are not available on this runner (proprietary, machine-local). Skipping the add-in compile. Build it locally with build.ps1 on a machine that has Navisworks installed."
+          }
+      - name: Build add-in
+        if: steps.nav.outputs.found == 'true'
+        run: >-
+          msbuild src/Mycelium.Navisworks.Plugin/Mycelium.Navisworks.Plugin.csproj
+          /p:Configuration=Release
+          /p:NavisworksPath="${{ steps.nav.outputs.path }}"

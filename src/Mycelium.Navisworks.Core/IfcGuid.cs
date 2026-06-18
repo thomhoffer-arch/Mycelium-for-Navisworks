@@ -1,5 +1,4 @@
 using System;
-using System.Numerics;
 
 namespace Mycelium.Navisworks
 {
@@ -53,8 +52,16 @@ namespace Mycelium.Navisworks
             return Encode(b);
         }
 
-        private static string Encode(byte[] bytes)
+        /// <summary>
+        /// Compress 16 raw (big-endian) GUID bytes to the 22-char IFC GlobalId
+        /// form: a leading 2-bit char followed by twenty-one 6-bit chars, packed
+        /// most-significant-bit first.
+        /// </summary>
+        public static string Encode(byte[] bytes)
         {
+            if (bytes == null || bytes.Length != 16)
+                throw new ArgumentException("expected 16 GUID bytes", nameof(bytes));
+
             var sb = new System.Text.StringBuilder(22);
             sb.Append(Alphabet[(bytes[0] >> 6) & 0x3]);
             int acc = bytes[0] & 0x3f;
@@ -72,6 +79,34 @@ namespace Mycelium.Navisworks
             if (bits > 0)
                 sb.Append(Alphabet[(acc << (6 - bits)) & 0x3f]);
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Inverse of <see cref="Encode"/>: expand a 22-char IFC GlobalId back to
+        /// its 16 raw (big-endian) GUID bytes. Exposed mainly so the bit-packing
+        /// can be round-trip tested without a Navisworks host.
+        /// </summary>
+        public static byte[] Decode(string ifcGuid)
+        {
+            if (ifcGuid == null || ifcGuid.Length != 22)
+                throw new ArgumentException("expected a 22-char IFC GlobalId", nameof(ifcGuid));
+
+            var bytes = new byte[16];
+            int bitPos = 0; // global bit index, MSB-first across the 16 bytes
+            for (int i = 0; i < 22; i++)
+            {
+                int v = Alphabet.IndexOf(ifcGuid[i]);
+                if (v < 0)
+                    throw new ArgumentException("non-IFC-alphabet character at index " + i, nameof(ifcGuid));
+                int width = i == 0 ? 2 : 6; // first char carries only 2 bits
+                for (int b = width - 1; b >= 0; b--)
+                {
+                    int bit = (v >> b) & 1;
+                    bytes[bitPos >> 3] |= (byte)(bit << (7 - (bitPos & 7)));
+                    bitPos++;
+                }
+            }
+            return bytes;
         }
     }
 }

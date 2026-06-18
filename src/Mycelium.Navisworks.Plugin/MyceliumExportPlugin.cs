@@ -44,9 +44,8 @@ namespace Mycelium.Navisworks
             DocumentClash dc = doc.GetClash();
             if (dc?.TestsData?.Tests != null)
             {
-                foreach (SavedItem ti in dc.TestsData.Tests)
+                foreach (ClashTest test in EnumerateTests(dc.TestsData.Tests))
                 {
-                    if (!(ti is ClashTest test)) continue;
                     foreach (ClashResult result in EnumerateResults(test))
                     {
                         records.AddRange(RecordsFor(result, test, projectKey, modelInstance, nowIso));
@@ -58,6 +57,18 @@ namespace Mycelium.Navisworks
             System.Windows.Forms.MessageBox.Show(
                 $"Mycelium: wrote {records.Count} spine record(s) to\n{outPath}");
             return 0;
+        }
+
+        // Tests may sit directly under TestsData or be grouped into ClashTestSets
+        // (a GroupItem). Flatten so grouped tests aren't silently skipped.
+        private static IEnumerable<ClashTest> EnumerateTests(IEnumerable<SavedItem> items)
+        {
+            foreach (SavedItem item in items)
+            {
+                if (item is ClashTest test) yield return test;
+                else if (item is GroupItem group)
+                    foreach (ClashTest nested in EnumerateTests(group.Children)) yield return nested;
+            }
         }
 
         // ClashTest children may be ClashResult or ClashResultGroup (which nests).
@@ -79,6 +90,7 @@ namespace Mycelium.Navisworks
             string status = SafeStatus(result);
             string distance = SafeDistance(result);
             string text = $"test={test.DisplayName} status={status} distance={distance}";
+            string grid = SafeGridLocation(result);
 
             foreach (ModelItem item in ClashItems(result))
             {
@@ -91,8 +103,8 @@ namespace Mycelium.Navisworks
                     ProjectKey = projectKey,
                     IfcGuid = ifc,
                     ModelInstanceId = modelInstance,
-                    ZoneId = SafeGridLocation(result),
-                    ZoneName = SafeGridLocation(result),
+                    ZoneId = grid,
+                    ZoneName = grid,
                     Text = text,
                     RevisionId = nowIso,
                     AsOf = nowIso,
