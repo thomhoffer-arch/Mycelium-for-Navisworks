@@ -1,0 +1,68 @@
+name: Installer
+
+# Build the double-click Windows installer (MyceliumSetup.exe). Inno Setup only
+# packages files and embeds the install logic — it needs no Navisworks — so this
+# runs on a stock Windows runner. The .exe builds the add-in on the END USER's
+# machine at install time (see installer/mycelium.iss).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version stamped into the installer (e.g. 0.1.0)"
+        required: false
+        default: "0.0.0-dev"
+
+permissions:
+  contents: write   # needed to attach the .exe to a Release on tag builds
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: ver
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $v = "${{ github.ref_name }}" -replace '^v', ''
+          } elseif ("${{ github.event.inputs.version }}") {
+            $v = "${{ github.event.inputs.version }}"
+          } else {
+            $v = "0.0.0-dev"
+          }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Installer version: $v"
+
+      - name: Ensure Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            Write-Host "Inno Setup not preinstalled; installing via Chocolatey..."
+            choco install innosetup --no-progress -y
+          }
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found after install." }
+          "ISCC=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          & "$env:ISCC" "/DMyAppVersion=${{ steps.ver.outputs.version }}" installer\mycelium.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)." }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyceliumSetup
+          path: installer/dist/MyceliumSetup.exe
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer/dist/MyceliumSetup.exe

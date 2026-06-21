@@ -20,15 +20,33 @@ registry keeps each connector in its own repo.
 
 ## Install — one click (Windows)
 
-**Double-click `install.cmd`.** That's it. The installer self-elevates (the
-Navisworks `Plugins` folder lives under Program Files), detects every
-Navisworks Manage/Simulate install on the machine, builds the add-in against
-each, and deploys it. Then restart Navisworks → run
-**Tools ▸ Add-Ins ▸ Mycelium: Export clashes**.
+> **Windows only.** Navisworks ships for Windows only — there is no macOS build
+> of Navisworks for this add-in to plug into. On a Mac, run Navisworks (and this
+> installer) inside a Windows VM.
 
-Prerequisites (the add-in is an in-process .NET add-in, so it compiles against
-your local Navisworks API DLLs — these are machine-local and can't be vendored
-or prebuilt):
+### The installer (`MyceliumSetup.exe`)
+
+Download **`MyceliumSetup.exe`** from the
+[latest release](https://github.com/thomhoffer-arch/Mycelium-for-Navisworks/releases)
+and double-click it. It detects every Navisworks Manage/Simulate install on the
+machine, builds the add-in against each, and deploys it. Then restart
+Navisworks → run **Tools ▸ Add-Ins ▸ Mycelium: Export clashes**. Uninstall it
+from **Add/Remove Programs** like any app.
+
+The `.exe` carries the source and builds on your machine at install time — an
+in-process .NET add-in must compile against your local, proprietary Navisworks
+API DLLs, which can't be vendored or prebuilt. (The installer itself is built in
+CI; see `.github/workflows/installer.yml` and `installer/mycelium.iss`.)
+
+### Or the script (no `.exe`)
+
+If you have the repo checked out, **double-click `install.cmd`** — same thing.
+It self-elevates (the Navisworks `Plugins` folder lives under Program Files),
+detects every Navisworks install, builds the add-in against each, and deploys it.
+
+### Prerequisites
+
+Either path needs, on the target machine:
 
 - Navisworks Manage/Simulate installed locally.
 - A build tool: **Visual Studio Build Tools** with the *.NET desktop* workload
@@ -36,7 +54,7 @@ or prebuilt):
   targeting pack. The .NET SDK alone works as a fallback if the net48 targeting
   pack is present.
 
-To target one specific install, or to remove the add-in:
+To target one specific install, or to remove the add-in via the script:
 
 ```powershell
 .\install.ps1 -NavisworksPath "C:\Program Files\Autodesk\Navisworks Manage 2024"
