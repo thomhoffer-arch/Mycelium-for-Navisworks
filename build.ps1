@@ -16,6 +16,10 @@ msbuild $project `
     /p:Configuration=$Configuration `
     /p:NavisworksPath="$NavisworksPath"
 
-$dll = "src\Mycelium.Navisworks.Plugin\bin\$Configuration\net48\MyceliumNavisworks.dll"
-Write-Host "`nBuilt $dll" -ForegroundColor Green
-Write-Host "Deploy: copy it to a folder named 'MyceliumNavisworks' under the Navisworks 'Plugins' directory (see README)."
+$outDir = "src\Mycelium.Navisworks.Plugin\bin\$Configuration\net48"
+Write-Host "`nBuilt $outDir\MyceliumNavisworks.dll" -ForegroundColor Green
+Write-Host "Deploy BOTH DLLs (the plugin won't load without Core) to a folder named"
+Write-Host "'MyceliumNavisworks' under the Navisworks 'Plugins' directory:"
+Write-Host "  - $outDir\MyceliumNavisworks.dll"
+Write-Host "  - $outDir\Mycelium.Navisworks.Core.dll"
+Write-Host "`nOr just run install.cmd (one-click: detects Navisworks, builds, deploys both)." -ForegroundColor Cyan

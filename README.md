@@ -18,11 +18,32 @@ It's a **C# / .NET Framework / Windows** in-process add-in — a different stack
 and release cadence from the Node connectors, which is exactly why the Mycelium
 registry keeps each connector in its own repo.
 
-## Build — in one go (Windows)
+## Install — one click (Windows)
 
-Prerequisites: Navisworks Manage/Simulate installed locally (provides the API
-DLLs — these are machine-local and can't be vendored), plus MSBuild
-(Visual Studio or Build Tools) and .NET Framework 4.8 dev pack.
+**Double-click `install.cmd`.** That's it. The installer self-elevates (the
+Navisworks `Plugins` folder lives under Program Files), detects every
+Navisworks Manage/Simulate install on the machine, builds the add-in against
+each, and deploys it. Then restart Navisworks → run
+**Tools ▸ Add-Ins ▸ Mycelium: Export clashes**.
+
+Prerequisites (the add-in is an in-process .NET add-in, so it compiles against
+your local Navisworks API DLLs — these are machine-local and can't be vendored
+or prebuilt):
+
+- Navisworks Manage/Simulate installed locally.
+- A build tool: **Visual Studio Build Tools** with the *.NET desktop* workload
+  (or full Visual Studio), which provides MSBuild and the .NET Framework 4.8
+  targeting pack. The .NET SDK alone works as a fallback if the net48 targeting
+  pack is present.
+
+To target one specific install, or to remove the add-in:
+
+```powershell
+.\install.ps1 -NavisworksPath "C:\Program Files\Autodesk\Navisworks Manage 2024"
+.\install.cmd /uninstall      # or: .\install.ps1 -Uninstall
+```
+
+### Build only (no deploy)
 
 ```powershell
 # default path is Navisworks Manage 2024; override if yours differs
@@ -35,15 +56,18 @@ or directly:
 msbuild src\Mycelium.Navisworks.Plugin\Mycelium.Navisworks.Plugin.csproj /p:Configuration=Release /p:NavisworksPath="<install dir>"
 ```
 
-Output: `src\Mycelium.Navisworks.Plugin\bin\Release\net48\MyceliumNavisworks.dll`.
+Output: `src\Mycelium.Navisworks.Plugin\bin\Release\net48\`.
 
-## Install the plugin
+### Manual deploy
 
-Copy the DLL into a folder **named after the plugin** under the Navisworks
+If you deploy by hand, copy **both** DLLs — the add-in won't load without its
+Core dependency — into a folder **named after the plugin** under the Navisworks
 `Plugins` directory:
 
 ```
-<Navisworks install>\Plugins\MyceliumNavisworks\MyceliumNavisworks.dll
+<Navisworks install>\Plugins\MyceliumNavisworks\
+    MyceliumNavisworks.dll
+    Mycelium.Navisworks.Core.dll
 ```
 
 Restart Navisworks → run **Tools ▸ Add-Ins ▸ Mycelium: Export clashes**. It
